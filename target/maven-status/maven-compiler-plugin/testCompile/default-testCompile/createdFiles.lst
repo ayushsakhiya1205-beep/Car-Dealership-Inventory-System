@@ -1,0 +1,11 @@
+com\dealership\inventory\controller\PurchaseControllerTest.class
+com\dealership\inventory\controller\VehicleControllerTest.class
+com\dealership\inventory\security\CustomUserDetailsServiceTest.class
+com\dealership\inventory\controller\AnalyticsControllerTest.class
+com\dealership\inventory\service\VehicleServiceTest.class
+com\dealership\inventory\security\JwtTokenProviderTest.class
+com\dealership\inventory\service\UserServiceTest.class
+com\dealership\inventory\service\InvoiceServiceTest.class
+com\dealership\inventory\service\PurchaseServiceTest.class
+com\dealership\inventory\controller\AuthControllerTest.class
+com\dealership\inventory\service\AnalyticsServiceTest.class

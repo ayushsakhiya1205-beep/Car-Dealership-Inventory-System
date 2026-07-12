@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AnalyticsService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Car Dealership Inventory System</a> &gt; <a href="index.source.html" class="el_package">com.dealership.inventory.service</a> &gt; <span class="el_source">AnalyticsService.java</span></div><h1>AnalyticsService.java</h1><pre class="source lang-java linenums">package com.dealership.inventory.service;
+
+import com.dealership.inventory.dto.response.AnalyticsResponse;
+import com.dealership.inventory.model.PurchaseRecord;
+import com.dealership.inventory.model.Vehicle;
+import com.dealership.inventory.repository.PurchaseRecordRepository;
+import com.dealership.inventory.repository.VehicleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Service class responsible for aggregating dealership inventory metrics,
+ * low stock levels, and historical order details to drive visual chart data.
+ */
+@Service
+public class AnalyticsService {
+
+    private final VehicleRepository vehicleRepository;
+    private final PurchaseRecordRepository purchaseRecordRepository;
+
+    @Autowired
+    public AnalyticsService(VehicleRepository vehicleRepository,
+<span class="fc" id="L29">                            PurchaseRecordRepository purchaseRecordRepository) {</span>
+<span class="fc" id="L30">        this.vehicleRepository = vehicleRepository;</span>
+<span class="fc" id="L31">        this.purchaseRecordRepository = purchaseRecordRepository;</span>
+<span class="fc" id="L32">    }</span>
+
+    /**
+     * Aggregates and returns a consolidated summary containing overall KPIs
+     * and formatted charting series for categories and monthly sales records.
+     *
+     * @return populated {@link AnalyticsResponse}
+     */
+    public AnalyticsResponse getAnalyticsSummary() {
+<span class="fc" id="L41">        List&lt;Vehicle&gt; vehicles = vehicleRepository.findAll();</span>
+<span class="fc" id="L42">        List&lt;PurchaseRecord&gt; purchases = purchaseRecordRepository.findAll();</span>
+
+<span class="fc" id="L44">        long totalDistinctModels = vehicles.size();</span>
+<span class="fc" id="L45">        int totalVehicles = calculateTotalVehicles(vehicles);</span>
+<span class="fc" id="L46">        double totalInventoryValue = calculateTotalInventoryValue(vehicles);</span>
+<span class="fc" id="L47">        int totalSoldVehicles = calculateTotalSoldVehicles(purchases);</span>
+<span class="fc" id="L48">        long lowStockVehicles = countLowStockVehicles(vehicles);</span>
+<span class="fc" id="L49">        long outOfStockVehicles = countOutOfStockVehicles(vehicles);</span>
+
+<span class="fc" id="L51">        List&lt;AnalyticsResponse.ChartData&gt; categoryDistribution = computeCategoryDistribution(vehicles);</span>
+<span class="fc" id="L52">        List&lt;AnalyticsResponse.ChartData&gt; inventoryByCategory = computeInventoryByCategory(vehicles);</span>
+<span class="fc" id="L53">        List&lt;AnalyticsResponse.ChartData&gt; monthlySales = computeMonthlySalesTrend(purchases);</span>
+
+<span class="fc" id="L55">        return AnalyticsResponse.builder()</span>
+<span class="fc" id="L56">                .totalVehicles(totalVehicles)</span>
+<span class="fc" id="L57">                .totalDistinctModels(totalDistinctModels)</span>
+<span class="fc" id="L58">                .totalInventoryValue(totalInventoryValue)</span>
+<span class="fc" id="L59">                .totalSoldVehicles(totalSoldVehicles)</span>
+<span class="fc" id="L60">                .lowStockVehicles(lowStockVehicles)</span>
+<span class="fc" id="L61">                .outOfStockVehicles(outOfStockVehicles)</span>
+<span class="fc" id="L62">                .categoryDistribution(categoryDistribution)</span>
+<span class="fc" id="L63">                .inventoryByCategory(inventoryByCategory)</span>
+<span class="fc" id="L64">                .monthlySales(monthlySales)</span>
+<span class="fc" id="L65">                .build();</span>
+    }
+
+    private int calculateTotalVehicles(List&lt;Vehicle&gt; vehicles) {
+<span class="fc" id="L69">        return vehicles.stream().mapToInt(Vehicle::getStock).sum();</span>
+    }
+
+    private double calculateTotalInventoryValue(List&lt;Vehicle&gt; vehicles) {
+<span class="fc" id="L73">        return vehicles.stream().mapToDouble(v -&gt; v.getPrice() * v.getStock()).sum();</span>
+    }
+
+    private int calculateTotalSoldVehicles(List&lt;PurchaseRecord&gt; purchases) {
+<span class="fc" id="L77">        return purchases.stream().mapToInt(PurchaseRecord::getQuantity).sum();</span>
+    }
+
+    private long countLowStockVehicles(List&lt;Vehicle&gt; vehicles) {
+<span class="fc bfc" id="L81" title="All 4 branches covered.">        return vehicles.stream().filter(v -&gt; v.getStock() &gt; 0 &amp;&amp; v.getStock() &lt;= 3).count();</span>
+    }
+
+    private long countOutOfStockVehicles(List&lt;Vehicle&gt; vehicles) {
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        return vehicles.stream().filter(v -&gt; v.getStock() == 0).count();</span>
+    }
+
+    private List&lt;AnalyticsResponse.ChartData&gt; computeCategoryDistribution(List&lt;Vehicle&gt; vehicles) {
+<span class="fc" id="L89">        Map&lt;String, Long&gt; modelsByCategoryMap = vehicles.stream()</span>
+<span class="fc" id="L90">                .collect(Collectors.groupingBy(</span>
+<span class="fc" id="L91">                        v -&gt; getCategoryOrFallback(v.getCategory()),</span>
+<span class="fc" id="L92">                        Collectors.counting()</span>
+                ));
+<span class="fc" id="L94">        return modelsByCategoryMap.entrySet().stream()</span>
+<span class="fc" id="L95">                .map(e -&gt; new AnalyticsResponse.ChartData(e.getKey(), e.getValue().doubleValue()))</span>
+<span class="fc" id="L96">                .collect(Collectors.toList());</span>
+    }
+
+    private List&lt;AnalyticsResponse.ChartData&gt; computeInventoryByCategory(List&lt;Vehicle&gt; vehicles) {
+<span class="fc" id="L100">        Map&lt;String, Double&gt; valByCategoryMap = vehicles.stream()</span>
+<span class="fc" id="L101">                .collect(Collectors.groupingBy(</span>
+<span class="fc" id="L102">                        v -&gt; getCategoryOrFallback(v.getCategory()),</span>
+<span class="fc" id="L103">                        Collectors.summingDouble(v -&gt; v.getPrice() * v.getStock())</span>
+                ));
+<span class="fc" id="L105">        return valByCategoryMap.entrySet().stream()</span>
+<span class="fc" id="L106">                .map(e -&gt; new AnalyticsResponse.ChartData(e.getKey(), e.getValue()))</span>
+<span class="fc" id="L107">                .collect(Collectors.toList());</span>
+    }
+
+    private String getCategoryOrFallback(String category) {
+<span class="pc bpc" id="L111" title="2 of 4 branches missed.">        return category == null || category.trim().isEmpty() ? &quot;Other&quot; : category;</span>
+    }
+
+    private List&lt;AnalyticsResponse.ChartData&gt; computeMonthlySalesTrend(List&lt;PurchaseRecord&gt; purchases) {
+<span class="fc" id="L115">        List&lt;AnalyticsResponse.ChartData&gt; monthlySales = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">        for (int i = 5; i &gt;= 0; i--) {</span>
+<span class="fc" id="L117">            YearMonth ym = YearMonth.now().minusMonths(i);</span>
+<span class="fc" id="L118">            String monthLabel = ym.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);</span>
+
+<span class="fc" id="L120">            double totalSales = purchases.stream()</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">                    .filter(p -&gt; p.getPurchasedAt() != null)</span>
+<span class="fc" id="L122">                    .filter(p -&gt; {</span>
+<span class="fc" id="L123">                        LocalDateTime dt = p.getPurchasedAt();</span>
+<span class="pc bpc" id="L124" title="1 of 4 branches missed.">                        return dt.getYear() == ym.getYear() &amp;&amp; dt.getMonthValue() == ym.getMonthValue();</span>
+                    })
+<span class="fc" id="L126">                    .mapToDouble(PurchaseRecord::getQuantity)</span>
+<span class="fc" id="L127">                    .sum();</span>
+
+<span class="fc" id="L129">            monthlySales.add(new AnalyticsResponse.ChartData(monthLabel, totalSales));</span>
+        }
+<span class="fc" id="L131">        return monthlySales;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

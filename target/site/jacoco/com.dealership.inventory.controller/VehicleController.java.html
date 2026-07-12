@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VehicleController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Car Dealership Inventory System</a> &gt; <a href="index.source.html" class="el_package">com.dealership.inventory.controller</a> &gt; <span class="el_source">VehicleController.java</span></div><h1>VehicleController.java</h1><pre class="source lang-java linenums">package com.dealership.inventory.controller;
+
+import com.dealership.inventory.dto.request.RestockRequest;
+import com.dealership.inventory.dto.request.VehicleRequest;
+import com.dealership.inventory.dto.response.VehicleResponse;
+import com.dealership.inventory.service.VehicleService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * REST controller managing vehicle resources in the dealership's inventory catalog.
+ */
+@RestController
+@RequestMapping(&quot;/api/vehicles&quot;)
+public class VehicleController {
+
+    private final VehicleService vehicleService;
+
+    @Autowired
+<span class="fc" id="L26">    public VehicleController(VehicleService vehicleService) {</span>
+<span class="fc" id="L27">        this.vehicleService = vehicleService;</span>
+<span class="fc" id="L28">    }</span>
+
+    /**
+     * Registers a new vehicle into the catalog. Enforces validation constraints.
+     *
+     * @param request payload containing specifications of the new vehicle
+     * @return 201 Created containing the generated vehicle data
+     */
+    @PostMapping
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;VehicleResponse&gt; createVehicle(@Valid @RequestBody VehicleRequest request) {
+<span class="fc" id="L39">        VehicleResponse response = vehicleService.createVehicle(request);</span>
+<span class="fc" id="L40">        return new ResponseEntity&lt;&gt;(response, HttpStatus.CREATED);</span>
+    }
+
+    /**
+     * Retrieves the specifications of a single vehicle by identifier.
+     *
+     * @param id vehicle identifier
+     * @return 200 OK containing vehicle specifications
+     */
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;VehicleResponse&gt; getVehicleById(@PathVariable String id) {
+<span class="fc" id="L51">        VehicleResponse response = vehicleService.getVehicleById(id);</span>
+<span class="fc" id="L52">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * Queries and filters the vehicle inventory catalog based on criteria.
+     * Supports partial matches on keyword across multiple text fields.
+     *
+     * @param keyword search keyword (make, model, description)
+     * @param make exact make filter
+     * @param model exact model filter
+     * @param year exact year filter
+     * @param minPrice minimum price filter bounds
+     * @param maxPrice maximum price filter bounds
+     * @return 200 OK matching vehicles list
+     */
+    @GetMapping
+    public ResponseEntity&lt;List&lt;VehicleResponse&gt;&gt; searchVehicles(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String make,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice) {
+
+<span class="fc" id="L76">        List&lt;VehicleResponse&gt; responses = vehicleService.searchVehicles(keyword, make, model, year, minPrice, maxPrice);</span>
+<span class="fc" id="L77">        return ResponseEntity.ok(responses);</span>
+    }
+
+    /**
+     * Updates specifications for a vehicle in the catalog.
+     *
+     * @param id vehicle identifier
+     * @param request payload containing new specifications
+     * @return 200 OK containing updated vehicle data
+     */
+    @PutMapping(&quot;/{id}&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;VehicleResponse&gt; updateVehicle(
+            @PathVariable String id,
+            @Valid @RequestBody VehicleRequest request) {
+<span class="fc" id="L92">        VehicleResponse response = vehicleService.updateVehicle(id, request);</span>
+<span class="fc" id="L93">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * Removes a vehicle completely from the catalog.
+     *
+     * @param id vehicle identifier
+     * @return 204 No Content
+     */
+    @DeleteMapping(&quot;/{id}&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;Void&gt; deleteVehicle(@PathVariable String id) {
+<span class="fc" id="L105">        vehicleService.deleteVehicle(id);</span>
+<span class="fc" id="L106">        return ResponseEntity.noContent().build();</span>
+    }
+
+    /**
+     * Increments the inventory stock count for a vehicle in the catalog.
+     *
+     * @param id vehicle identifier
+     * @param request restock request containing restock quantity
+     * @return 200 OK containing updated vehicle data
+     */
+    @PatchMapping(&quot;/{id}/restock&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;VehicleResponse&gt; restockVehicle(
+            @PathVariable String id,
+            @Valid @RequestBody RestockRequest request) {
+<span class="fc" id="L121">        VehicleResponse response = vehicleService.restockVehicle(id, request.getQuantity());</span>
+<span class="fc" id="L122">        return ResponseEntity.ok(response);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

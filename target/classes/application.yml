@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/car_dealership}
+  main:
+    allow-bean-definition-overriding: true
+
+app:
+  jwt:
+    # 256-bit secret key for HMAC-SHA256 signing
+    secret: 9a2f96e4875324d67389a6a8c432d6f78a2f96e4875324d67389a6a8c432d6f7
+    # 1 day in milliseconds
+    expiration-ms: 86400000
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.springframework.data.mongodb: INFO

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PurchaseController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Car Dealership Inventory System</a> &gt; <a href="index.source.html" class="el_package">com.dealership.inventory.controller</a> &gt; <span class="el_source">PurchaseController.java</span></div><h1>PurchaseController.java</h1><pre class="source lang-java linenums">package com.dealership.inventory.controller;
+
+import com.dealership.inventory.dto.request.PurchaseRequest;
+import com.dealership.inventory.dto.response.PurchaseResponse;
+import com.dealership.inventory.model.PurchaseRecord;
+import com.dealership.inventory.model.User;
+import com.dealership.inventory.repository.UserRepository;
+import com.dealership.inventory.service.InvoiceService;
+import com.dealership.inventory.service.PurchaseService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * REST controller managing transaction orders, purchase records, and customer receipts.
+ */
+@RestController
+@RequestMapping(&quot;/api/purchases&quot;)
+public class PurchaseController {
+
+    private final PurchaseService purchaseService;
+    private final InvoiceService invoiceService;
+    private final UserRepository userRepository;
+
+    @Autowired
+    public PurchaseController(PurchaseService purchaseService,
+                              InvoiceService invoiceService,
+<span class="fc" id="L38">                              UserRepository userRepository) {</span>
+<span class="fc" id="L39">        this.purchaseService = purchaseService;</span>
+<span class="fc" id="L40">        this.invoiceService = invoiceService;</span>
+<span class="fc" id="L41">        this.userRepository = userRepository;</span>
+<span class="fc" id="L42">    }</span>
+
+    /**
+     * Executes a vehicle purchase order. Stock quantities are decremented atomically.
+     *
+     * @param request purchase request containing vehicle identifier and unit quantity
+     * @param userDetails credentials of the authenticated customer initiating the order
+     * @return 201 Created containing purchase confirmation details
+     */
+    @PostMapping
+    public ResponseEntity&lt;PurchaseResponse&gt; purchaseVehicle(
+            @Valid @RequestBody PurchaseRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+<span class="fc" id="L55">        PurchaseResponse response = purchaseService.purchaseVehicle(request, userDetails.getUsername());</span>
+<span class="fc" id="L56">        return new ResponseEntity&lt;&gt;(response, HttpStatus.CREATED);</span>
+    }
+
+    /**
+     * Fetches the historical purchase receipts associated with the authenticated customer.
+     *
+     * @param userDetails credentials of the logged-in customer
+     * @return 200 OK list of transaction records
+     */
+    @GetMapping(&quot;/history&quot;)
+    public ResponseEntity&lt;List&lt;PurchaseResponse&gt;&gt; getPurchaseHistory(
+            @AuthenticationPrincipal UserDetails userDetails) {
+<span class="fc" id="L68">        List&lt;PurchaseResponse&gt; response = purchaseService.getPurchaseHistory(userDetails.getUsername());</span>
+<span class="fc" id="L69">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * Fetches all transactional order audits recorded in the system.
+     *
+     * @return 200 OK list of system transaction records
+     */
+    @GetMapping
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;List&lt;PurchaseResponse&gt;&gt; getAllPurchases() {
+<span class="fc" id="L80">        List&lt;PurchaseResponse&gt; response = purchaseService.getAllPurchases();</span>
+<span class="fc" id="L81">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * Generates and downloads the PDF invoice attachment for a specific transaction record.
+     * Enforces ownership checking: customers can download their own invoice, admins can access any record.
+     *
+     * @param id purchase transaction identifier
+     * @param userDetails credentials of the user requesting the invoice
+     * @return 200 OK raw PDF binary attachment stream
+     */
+    @GetMapping(&quot;/{id}/invoice&quot;)
+    public ResponseEntity&lt;byte[]&gt; downloadInvoice(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+<span class="fc" id="L96">        PurchaseRecord record = purchaseService.getPurchaseRecordById(id);</span>
+<span class="fc" id="L97">        User user = userRepository.findByUsername(userDetails.getUsername())</span>
+<span class="pc" id="L98">                .orElseThrow(() -&gt; new AccessDeniedException(&quot;User session not found&quot;));</span>
+
+<span class="fc" id="L100">        boolean isAdmin = userDetails.getAuthorities().stream()</span>
+<span class="fc" id="L101">                .anyMatch(a -&gt; a.getAuthority().equals(&quot;ROLE_ADMIN&quot;));</span>
+
+<span class="pc bpc" id="L103" title="2 of 4 branches missed.">        if (!isAdmin &amp;&amp; !record.getUserId().equals(user.getId())) {</span>
+<span class="nc" id="L104">            throw new AccessDeniedException(&quot;You are not authorized to access this invoice&quot;);</span>
+        }
+
+<span class="fc" id="L107">        byte[] pdfBytes = invoiceService.generateInvoicePdf(record);</span>
+
+<span class="fc" id="L109">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="fc" id="L110">        headers.setContentType(MediaType.APPLICATION_PDF);</span>
+<span class="fc" id="L111">        headers.setContentDispositionFormData(&quot;attachment&quot;, &quot;invoice-&quot; + id + &quot;.pdf&quot;);</span>
+<span class="fc" id="L112">        headers.setCacheControl(&quot;must-revalidate, post-check=0, pre-check=0&quot;);</span>
+
+<span class="fc" id="L114">        return new ResponseEntity&lt;&gt;(pdfBytes, headers, HttpStatus.OK);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

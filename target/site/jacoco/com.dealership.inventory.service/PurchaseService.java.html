@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PurchaseService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Car Dealership Inventory System</a> &gt; <a href="index.source.html" class="el_package">com.dealership.inventory.service</a> &gt; <span class="el_source">PurchaseService.java</span></div><h1>PurchaseService.java</h1><pre class="source lang-java linenums">package com.dealership.inventory.service;
+
+import com.dealership.inventory.dto.request.PurchaseRequest;
+import com.dealership.inventory.dto.response.PurchaseResponse;
+import com.dealership.inventory.exception.BadRequestException;
+import com.dealership.inventory.exception.InsufficientStockException;
+import com.dealership.inventory.exception.ResourceNotFoundException;
+import com.dealership.inventory.model.PurchaseRecord;
+import com.dealership.inventory.model.User;
+import com.dealership.inventory.model.Vehicle;
+import com.dealership.inventory.repository.PurchaseRecordRepository;
+import com.dealership.inventory.repository.UserRepository;
+import com.dealership.inventory.repository.VehicleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Service class orchestrating customer purchase orders, validation,
+ * stock decrements, and order transactions listing.
+ */
+@Service
+public class PurchaseService {
+
+    private final UserRepository userRepository;
+    private final VehicleRepository vehicleRepository;
+    private final PurchaseRecordRepository purchaseRecordRepository;
+
+    @Autowired
+    public PurchaseService(UserRepository userRepository,
+                           VehicleRepository vehicleRepository,
+<span class="fc" id="L34">                           PurchaseRecordRepository purchaseRecordRepository) {</span>
+<span class="fc" id="L35">        this.userRepository = userRepository;</span>
+<span class="fc" id="L36">        this.vehicleRepository = vehicleRepository;</span>
+<span class="fc" id="L37">        this.purchaseRecordRepository = purchaseRecordRepository;</span>
+<span class="fc" id="L38">    }</span>
+
+    /**
+     * Executes a vehicle purchase transaction. Stock limits are verified,
+     * decremented atomically, and transaction records compiled.
+     *
+     * @param request purchase parameters containing vehicle ID and quantity
+     * @param username username of the buyer customer Account
+     * @return populated {@link PurchaseResponse} DTO schema
+     */
+    public PurchaseResponse purchaseVehicle(PurchaseRequest request, String username) {
+<span class="fc" id="L49">        User user = userRepository.findByUsername(username)</span>
+<span class="pc" id="L50">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;User not found: &quot; + username));</span>
+
+<span class="fc" id="L52">        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())</span>
+<span class="pc" id="L53">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Vehicle not found: &quot; + request.getVehicleId()));</span>
+
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (vehicle.getStock() &lt; request.getQuantity()) {</span>
+<span class="fc" id="L56">            throw new InsufficientStockException(&quot;Insufficient stock. Available: &quot; + vehicle.getStock());</span>
+        }
+
+        // Decrement stock
+<span class="fc" id="L60">        vehicle.setStock(vehicle.getStock() - request.getQuantity());</span>
+<span class="fc" id="L61">        vehicleRepository.save(vehicle);</span>
+
+        // Record purchase
+<span class="fc" id="L64">        PurchaseRecord record = PurchaseRecord.builder()</span>
+<span class="fc" id="L65">                .userId(user.getId())</span>
+<span class="fc" id="L66">                .vehicleId(vehicle.getId())</span>
+<span class="fc" id="L67">                .purchasePrice(vehicle.getPrice())</span>
+<span class="fc" id="L68">                .quantity(request.getQuantity())</span>
+<span class="fc" id="L69">                .build();</span>
+
+<span class="fc" id="L71">        PurchaseRecord savedRecord = purchaseRecordRepository.save(record);</span>
+
+<span class="fc" id="L73">        return mapToResponse(savedRecord);</span>
+    }
+
+    public List&lt;PurchaseResponse&gt; getPurchaseHistory(String username) {
+<span class="nc" id="L77">        User user = userRepository.findByUsername(username)</span>
+<span class="nc" id="L78">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;User not found: &quot; + username));</span>
+
+<span class="nc" id="L80">        return purchaseRecordRepository.findByUserId(user.getId()).stream()</span>
+<span class="nc" id="L81">                .map(this::mapToResponse)</span>
+<span class="nc" id="L82">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;PurchaseResponse&gt; getAllPurchases() {
+<span class="nc" id="L86">        return purchaseRecordRepository.findAll().stream()</span>
+<span class="nc" id="L87">                .map(this::mapToResponse)</span>
+<span class="nc" id="L88">                .collect(Collectors.toList());</span>
+    }
+
+    public PurchaseRecord getPurchaseRecordById(String id) {
+<span class="nc" id="L92">        return purchaseRecordRepository.findById(id)</span>
+<span class="nc" id="L93">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Purchase record not found with id: &quot; + id));</span>
+    }
+
+    private PurchaseResponse mapToResponse(PurchaseRecord record) {
+<span class="fc" id="L97">        return PurchaseResponse.builder()</span>
+<span class="fc" id="L98">                .id(record.getId())</span>
+<span class="fc" id="L99">                .userId(record.getUserId())</span>
+<span class="fc" id="L100">                .vehicleId(record.getVehicleId())</span>
+<span class="fc" id="L101">                .purchasePrice(record.getPurchasePrice())</span>
+<span class="fc" id="L102">                .quantity(record.getQuantity())</span>
+<span class="fc" id="L103">                .totalAmount(record.getPurchasePrice() * record.getQuantity())</span>
+<span class="fc" id="L104">                .purchasedAt(record.getPurchasedAt())</span>
+<span class="fc" id="L105">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

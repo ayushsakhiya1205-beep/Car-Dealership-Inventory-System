@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VehicleService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Car Dealership Inventory System</a> &gt; <a href="index.source.html" class="el_package">com.dealership.inventory.service</a> &gt; <span class="el_source">VehicleService.java</span></div><h1>VehicleService.java</h1><pre class="source lang-java linenums">package com.dealership.inventory.service;
+
+import com.dealership.inventory.dto.request.VehicleRequest;
+import com.dealership.inventory.dto.response.VehicleResponse;
+import com.dealership.inventory.exception.ResourceNotFoundException;
+import com.dealership.inventory.model.Vehicle;
+import com.dealership.inventory.repository.VehicleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Service class orchestrating vehicle catalog data persistence,
+ * search parameters filter operations, and restocking updates.
+ */
+@Service
+public class VehicleService {
+
+    private final VehicleRepository vehicleRepository;
+    private final MongoTemplate mongoTemplate;
+
+    @Autowired
+<span class="fc" id="L28">    public VehicleService(VehicleRepository vehicleRepository, MongoTemplate mongoTemplate) {</span>
+<span class="fc" id="L29">        this.vehicleRepository = vehicleRepository;</span>
+<span class="fc" id="L30">        this.mongoTemplate = mongoTemplate;</span>
+<span class="fc" id="L31">    }</span>
+
+    /**
+     * Persists a new vehicle record in the inventory.
+     *
+     * @param request payload containing specifications of the vehicle
+     * @return populated {@link VehicleResponse} DTO schema
+     */
+    public VehicleResponse createVehicle(VehicleRequest request) {
+<span class="fc" id="L40">        Vehicle vehicle = Vehicle.builder()</span>
+<span class="fc" id="L41">                .make(request.getMake())</span>
+<span class="fc" id="L42">                .model(request.getModel())</span>
+<span class="fc" id="L43">                .year(request.getYear())</span>
+<span class="fc" id="L44">                .price(request.getPrice())</span>
+<span class="fc" id="L45">                .stock(request.getStock())</span>
+<span class="fc" id="L46">                .description(request.getDescription())</span>
+<span class="fc" id="L47">                .category(request.getCategory())</span>
+<span class="fc" id="L48">                .build();</span>
+
+<span class="fc" id="L50">        Vehicle saved = vehicleRepository.save(vehicle);</span>
+<span class="fc" id="L51">        return mapToResponse(saved);</span>
+    }
+
+    public VehicleResponse getVehicleById(String id) {
+<span class="fc" id="L55">        Vehicle vehicle = vehicleRepository.findById(id)</span>
+<span class="fc" id="L56">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Vehicle not found with id: &quot; + id));</span>
+<span class="fc" id="L57">        return mapToResponse(vehicle);</span>
+    }
+
+    public List&lt;VehicleResponse&gt; getAllVehicles() {
+<span class="nc" id="L61">        return vehicleRepository.findAll().stream()</span>
+<span class="nc" id="L62">                .map(this::mapToResponse)</span>
+<span class="nc" id="L63">                .collect(Collectors.toList());</span>
+    }
+
+    public VehicleResponse updateVehicle(String id, VehicleRequest request) {
+<span class="fc" id="L67">        Vehicle vehicle = vehicleRepository.findById(id)</span>
+<span class="pc" id="L68">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Vehicle not found with id: &quot; + id));</span>
+
+<span class="fc" id="L70">        vehicle.setMake(request.getMake());</span>
+<span class="fc" id="L71">        vehicle.setModel(request.getModel());</span>
+<span class="fc" id="L72">        vehicle.setYear(request.getYear());</span>
+<span class="fc" id="L73">        vehicle.setPrice(request.getPrice());</span>
+<span class="fc" id="L74">        vehicle.setStock(request.getStock());</span>
+<span class="fc" id="L75">        vehicle.setDescription(request.getDescription());</span>
+<span class="fc" id="L76">        vehicle.setCategory(request.getCategory());</span>
+
+<span class="fc" id="L78">        Vehicle updated = vehicleRepository.save(vehicle);</span>
+<span class="fc" id="L79">        return mapToResponse(updated);</span>
+    }
+
+    public void deleteVehicle(String id) {
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        if (!vehicleRepository.existsById(id)) {</span>
+<span class="nc" id="L84">            throw new ResourceNotFoundException(&quot;Vehicle not found with id: &quot; + id);</span>
+        }
+<span class="nc" id="L86">        vehicleRepository.deleteById(id);</span>
+<span class="nc" id="L87">    }</span>
+
+    public VehicleResponse restockVehicle(String id, Integer quantity) {
+<span class="fc" id="L90">        Vehicle vehicle = vehicleRepository.findById(id)</span>
+<span class="pc" id="L91">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Vehicle not found with id: &quot; + id));</span>
+
+<span class="fc" id="L93">        vehicle.setStock(vehicle.getStock() + quantity);</span>
+<span class="fc" id="L94">        Vehicle updated = vehicleRepository.save(vehicle);</span>
+<span class="fc" id="L95">        return mapToResponse(updated);</span>
+    }
+
+    public List&lt;VehicleResponse&gt; searchVehicles(String keyword, String make, String model, Integer year, Double minPrice, Double maxPrice) {
+<span class="nc" id="L99">        Query query = buildSearchQuery(keyword, make, model, year, minPrice, maxPrice);</span>
+<span class="nc" id="L100">        List&lt;Vehicle&gt; vehicles = mongoTemplate.find(query, Vehicle.class);</span>
+<span class="nc" id="L101">        return vehicles.stream().map(this::mapToResponse).collect(Collectors.toList());</span>
+    }
+
+    private Query buildSearchQuery(String keyword, String make, String model, Integer year, Double minPrice, Double maxPrice) {
+<span class="nc" id="L105">        Query query = new Query();</span>
+
+<span class="nc bnc" id="L107" title="All 4 branches missed.">        if (keyword != null &amp;&amp; !keyword.trim().isEmpty()) {</span>
+<span class="nc" id="L108">            query.addCriteria(new Criteria().orOperator(</span>
+<span class="nc" id="L109">                    Criteria.where(&quot;make&quot;).regex(keyword, &quot;i&quot;),</span>
+<span class="nc" id="L110">                    Criteria.where(&quot;model&quot;).regex(keyword, &quot;i&quot;),</span>
+<span class="nc" id="L111">                    Criteria.where(&quot;description&quot;).regex(keyword, &quot;i&quot;)</span>
+            ));
+        }
+
+<span class="nc bnc" id="L115" title="All 4 branches missed.">        if (make != null &amp;&amp; !make.trim().isEmpty()) {</span>
+<span class="nc" id="L116">            query.addCriteria(Criteria.where(&quot;make&quot;).is(make));</span>
+        }
+
+<span class="nc bnc" id="L119" title="All 4 branches missed.">        if (model != null &amp;&amp; !model.trim().isEmpty()) {</span>
+<span class="nc" id="L120">            query.addCriteria(Criteria.where(&quot;model&quot;).is(model));</span>
+        }
+
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (year != null) {</span>
+<span class="nc" id="L124">            query.addCriteria(Criteria.where(&quot;year&quot;).is(year));</span>
+        }
+
+<span class="nc bnc" id="L127" title="All 4 branches missed.">        if (minPrice != null &amp;&amp; maxPrice != null) {</span>
+<span class="nc" id="L128">            query.addCriteria(Criteria.where(&quot;price&quot;).gte(minPrice).lte(maxPrice));</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        } else if (minPrice != null) {</span>
+<span class="nc" id="L130">            query.addCriteria(Criteria.where(&quot;price&quot;).gte(minPrice));</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        } else if (maxPrice != null) {</span>
+<span class="nc" id="L132">            query.addCriteria(Criteria.where(&quot;price&quot;).lte(maxPrice));</span>
+        }
+
+<span class="nc" id="L135">        return query;</span>
+    }
+
+    private VehicleResponse mapToResponse(Vehicle vehicle) {
+<span class="fc" id="L139">        return VehicleResponse.builder()</span>
+<span class="fc" id="L140">                .id(vehicle.getId())</span>
+<span class="fc" id="L141">                .make(vehicle.getMake())</span>
+<span class="fc" id="L142">                .model(vehicle.getModel())</span>
+<span class="fc" id="L143">                .year(vehicle.getYear())</span>
+<span class="fc" id="L144">                .price(vehicle.getPrice())</span>
+<span class="fc" id="L145">                .stock(vehicle.getStock())</span>
+<span class="fc" id="L146">                .description(vehicle.getDescription())</span>
+<span class="fc" id="L147">                .category(vehicle.getCategory())</span>
+<span class="fc" id="L148">                .createdAt(vehicle.getCreatedAt())</span>
+<span class="fc" id="L149">                .updatedAt(vehicle.getUpdatedAt())</span>
+<span class="fc" id="L150">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

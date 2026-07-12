@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Car Dealership Inventory System</a> &gt; <a href="index.source.html" class="el_package">com.dealership.inventory.controller</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.dealership.inventory.controller;
+
+import com.dealership.inventory.dto.request.LoginRequest;
+import com.dealership.inventory.dto.request.RegisterRequest;
+import com.dealership.inventory.dto.response.AuthResponse;
+import com.dealership.inventory.dto.response.UserResponse;
+import com.dealership.inventory.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping(&quot;/api/auth&quot;)
+public class AuthController {
+
+    private final UserService userService;
+
+    @Autowired
+<span class="fc" id="L24">    public AuthController(UserService userService) {</span>
+<span class="fc" id="L25">        this.userService = userService;</span>
+<span class="fc" id="L26">    }</span>
+
+    @PostMapping(&quot;/register&quot;)
+    public ResponseEntity&lt;UserResponse&gt; registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
+<span class="fc" id="L30">        UserResponse response = userService.registerUser(registerRequest);</span>
+<span class="fc" id="L31">        return new ResponseEntity&lt;&gt;(response, HttpStatus.CREATED);</span>
+    }
+
+    @PostMapping(&quot;/login&quot;)
+    public ResponseEntity&lt;AuthResponse&gt; authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+<span class="fc" id="L36">        AuthResponse response = userService.loginUser(loginRequest);</span>
+<span class="fc" id="L37">        return ResponseEntity.ok(response);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
