@@ -20,7 +20,7 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 px-6 py-4 shadow-lg">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand/Logo */}
+       
         <Link to="/dashboard" className="flex items-center space-x-2 group">
           <div className="bg-violet-600 p-2 rounded-lg group-hover:bg-violet-500 transition-colors duration-300">
             <Car className="h-6 w-6 text-white" />
