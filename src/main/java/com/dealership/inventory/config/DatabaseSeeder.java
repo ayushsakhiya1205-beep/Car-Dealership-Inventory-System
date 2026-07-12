@@ -88,7 +88,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             );
 
             vehicleRepository.saveAll(sampleVehicles);
-            logger.info("Successfully seeded sample vehicles catalog into inventory");
+            logger.info("Successfully seeded sample vehicles catalog in the inventory");
         }
     }
 }
